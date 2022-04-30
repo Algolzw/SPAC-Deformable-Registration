@@ -8,7 +8,7 @@ import time
 import utils
 from dataloader import BrainData
 from config import Config as cfg
-from brain import SAC
+from brain import SPAC
 from env import Env
 from summary import Summary
 from networks import *
@@ -35,7 +35,6 @@ def setup_seed(seed):
 
 if __name__ == "__main__":
     idx = 100
-    vis_labels = [21, 22, 33, 34, 101, 182]
     setup_seed(cfg.SEED)
     utils.remkdir(cfg.TEST_PATH)
 
@@ -47,7 +46,7 @@ if __name__ == "__main__":
     # test_data = BrainData(cfg.TEST_DATA, mode='test', size=cfg.HEIGHT, affine=False)
     test_loader = BrainData(cfg.TEST_DATA, mode='test')
     # test_loader = test_data.generator()
-    brain = SAC(stn, device)
+    brain = SPAC(stn, device)
     brain.load_model('actor', cfg.ACTOR_MODEL)
     brain.load_model('decoder', cfg.DECODER_MODEL_RL)
     brain.load_model('critic1', cfg.CRITIC1_MODEL)

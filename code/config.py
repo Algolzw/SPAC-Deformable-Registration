@@ -14,7 +14,7 @@ class Config:
     EP_BOOTSTRAP = 100
     UPDATE_GLOBAL_ITER = 8
     SAMPLE_BATCH_SIZE = 4
-    FREQUENCY_ACTOR = 2
+    FREQUENCY_PLANNER = 2
     FREQUENCY_VAE = 1
 
     GPU_ID = 0
@@ -47,16 +47,16 @@ class Config:
     MODEL_PATH = './model/'
     PROCESS_PATH = 'process'
     TEST_PATH = 'result'
-    DECODER_MODEL = MODEL_PATH + 'decoder.ckpt'
+    ACTOR_MODEL = MODEL_PATH + 'actor.ckpt'
     ENCODER_MODEL = MODEL_PATH + 'encoder.ckpt'
 
 
     # for evaluation
     idx = 10000
-    ACTOR_MODEL = MODEL_PATH + 'actor_{}.ckpt'.format(idx)
+    ACTOR_MODEL = MODEL_PATH + 'planner_{}.ckpt'.format(idx)
     CRITIC1_MODEL = MODEL_PATH + 'critic1_{}.ckpt'.format(idx)
     CRITIC2_MODEL = MODEL_PATH + 'critic2_{}.ckpt'.format(idx)
-    DECODER_MODEL_RL = MODEL_PATH + 'decoder_{}.ckpt'.format(idx)
+    ACTOR_MODEL_RL = MODEL_PATH + 'actor_{}.ckpt'.format(idx)
 
 
 

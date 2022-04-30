@@ -6,11 +6,11 @@
 
 ## Requirements
 
-0. Version
+- Version
 	* python 3.6
 	* pytorch 1.4
 
-1. Install requirements:
+- Install requirements:
 
 ```setup
 pip install -r requirements.txt

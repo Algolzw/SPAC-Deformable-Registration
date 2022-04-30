@@ -32,8 +32,8 @@ class Agent:
 
         total_step = 1
         global_ep = 0
+        update_planner = False
         update_actor = False
-        update_vae = False
         # buffer_s, buffer_a, buffer_v, buffer_r, buffer_h = [], [], [], [], []
         while global_ep < cfg.MAX_GLOBAL_EP:
 
@@ -71,16 +71,16 @@ class Agent:
                     self.feed_memory(utils.numpy(s, device=self.device),
                                      utils.numpy(latent, device=self.device), r,
                                      utils.numpy(s_, device=self.device), done)
-                # update actor when critic updated N times
-                if total_step % (cfg.FREQUENCY_ACTOR*cfg.UPDATE_GLOBAL_ITER) == 0:
+                # update planner when critic updated N times
+                if total_step % (cfg.FREQUENCY_PLANNER*cfg.UPDATE_GLOBAL_ITER) == 0:
+                    update_planner = True
+                else:
+                    update_planner = False
+
+                if total_step % (cfg.FREQUENCY_VAE*cfg.UPDATE_GLOBAL_ITER) == 0:
                     update_actor = True
                 else:
                     update_actor = False
-
-                if total_step % (cfg.FREQUENCY_VAE*cfg.UPDATE_GLOBAL_ITER) == 0:
-                    update_vae = True
-                else:
-                    update_vae = False
 
                 if global_ep >= cfg.EP_BOOTSTRAP and total_step % cfg.UPDATE_GLOBAL_ITER == 0:
                     if len(self.memories) < cfg.SAMPLE_BATCH_SIZE:
@@ -88,12 +88,10 @@ class Agent:
                     else:
                         samples = self.memories.sample(cfg.SAMPLE_BATCH_SIZE)
 
-                    loss = self.brain.optimize(update_actor, update_vae, samples)
+                    loss = self.brain.optimize(update_planner, update_actor, samples)
 
-                    if update_vae and global_ep % 10 == 0:
+                    if update_actor and global_ep % 10 == 0:
                         critic = min(loss['critic1'].item(), loss['critic2'].item())
-                        # actor = loss['actor'].item()
-                        # alpha = loss['alpha'].item()
                         reg = loss['reg'].item()
 
                         print('ep-{}-{:2d}:'.format(global_ep, step),

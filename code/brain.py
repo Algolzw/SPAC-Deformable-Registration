@@ -8,7 +8,7 @@ import utils
 from networks import *
 from config import Config as cfg
 
-class SAC:
+class SPAC:
     def __init__(self, stn, device=None):
         self.stn = stn
         self.device = device
@@ -16,8 +16,8 @@ class SAC:
 
         self.log_alpha = torch.tensor(-1.0).to(device).detach().requires_grad_(True)
 
-        self.actor = Encoder(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
-        self.decoder = Decoder(nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
+        self.planner = Encoder(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
+        self.actor = actor(nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
 
         self.critic1 = Critic(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
         self.critic2 = Critic(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
@@ -29,8 +29,8 @@ class SAC:
         self.eval(self.critic2_target)
 
         self.alpha_optim = torch.optim.Adam([self.log_alpha], lr=cfg.LEARNING_RATE, betas=(0.5, 0.9))
-        self.actor_optim = torch.optim.Adam(self.actor.parameters(), lr=cfg.LEARNING_RATE/5, betas=(0.5, 0.9))
-        self.decoder_optim = torch.optim.Adam(self.decoder.parameters(), lr=cfg.LEARNING_RATE, betas=(0.5, 0.9))
+        self.planner_optim = torch.optim.Adam(self.planner.parameters(), lr=cfg.LEARNING_RATE/5, betas=(0.5, 0.9))
+        self.actor_optim = torch.optim.Adam(self.actor.parameters(), lr=cfg.LEARNING_RATE, betas=(0.5, 0.9))
         self.critic1_optim = torch.optim.Adam(self.critic1.parameters(), lr=cfg.LEARNING_RATE/5, betas=(0.5, 0.9))
         self.critic2_optim = torch.optim.Adam(self.critic2.parameters(), lr=cfg.LEARNING_RATE/5, betas=(0.5, 0.9))
 
@@ -65,10 +65,10 @@ class SAC:
         return torch.min(v1, v2).item()
 
     def choose_action(self, state, test=False):
+        self.planner.eval()
         self.actor.eval()
-        self.decoder.eval()
 
-        dist, enc = self.actor(state)
+        dist, enc = self.planner(state)
 
         if test:
             latent = dist.mean
@@ -78,7 +78,7 @@ class SAC:
         # xs, ys, zs = state.size()[-3:]
         # flow_latent, aff_field = self.get_aff_flow(latent, xs, ys, zs)
 
-        field = self.decoder(latent, enc)
+        field = self.actor(latent, enc)
         if not test:
             field = field.clamp(-1, 1)
         else:
@@ -88,16 +88,16 @@ class SAC:
 
         return latent.detach(), field.detach()
 
-    def optimize(self, update_actor, update_vae, samples):
-        """ update_actor: should update actor now?
+    def optimize(self, update_planner, update_actor, samples):
+        """ update_planner: should update planner now?
             samples: s, a, r, s_
         """
+        self.planner.train()
         self.actor.train()
-        self.decoder.train()
         self.critic1.train()
         self.critic2.train()
 
-        loss = self._loss(samples, update_actor, update_vae)
+        loss = self._loss(samples, update_planner, update_actor)
 
         self.soft_update(self.critic1_target, self.critic1)
         self.soft_update(self.critic2_target, self.critic2)
@@ -105,7 +105,7 @@ class SAC:
         return loss
 
 
-    def _loss(self, samples, update_actor, update_vae):
+    def _loss(self, samples, update_planner, update_actor):
         s, a, r, s_, done = samples
 
         s = utils.tensor(s, device=self.device)
@@ -117,7 +117,7 @@ class SAC:
         loss = {}
 
         ######## critic loss #######
-        dist_, enc_ = self.actor(s_)
+        dist_, enc_ = self.planner(s_)
         a_ = dist_.sample()
 
         log_pi_next = dist_.log_prob(a_)
@@ -143,9 +143,9 @@ class SAC:
         loss['critic2'].backward()
         self.critic2_optim.step()
 
-        ########## actor loss  ############
-        if update_actor:
-            dist, enc = self.actor(s)
+        ########## planner loss  ############
+        if update_planner:
+            dist, enc = self.planner(s)
             action = dist.rsample()
             log_pi = dist.log_prob(action)
             # alpha loss
@@ -156,31 +156,31 @@ class SAC:
             loss['alpha'].backward()
             self.alpha_optim.step()
 
-            #############actor loss###############
-            actor_Q1 = self.critic1(s, action)
-            actor_Q2 = self.critic2(s, action)
-            actor_Q = torch.min(actor_Q1, actor_Q2)
-            actor_loss = (self.alpha.detach() * log_pi.unsqueeze(1) - actor_Q).mean()
+            #############planner loss###############
+            planner_Q1 = self.critic1(s, action)
+            planner_Q2 = self.critic2(s, action)
+            planner_Q = torch.min(planner_Q1, planner_Q2)
+            planner_loss = (self.alpha.detach() * log_pi.unsqueeze(1) - planner_Q).mean()
             kl_loss = self.kl_loss(dist)
 
-            loss['actor'] = actor_loss + cfg.ENTROPY_BETA*kl_loss
+            loss['planner'] = planner_loss + cfg.ENTROPY_BETA*kl_loss
 
-            self.actor_optim.zero_grad()
-            loss['actor'].backward(retain_graph=False)
-            self.actor_optim.step()
+            self.planner_optim.zero_grad()
+            loss['planner'].backward(retain_graph=False)
+            self.planner_optim.step()
 
         ########### resgistration loss ##########
-        if update_vae:
-            vae_dist, vae_enc = self.actor(s)
+        if update_actor:
+            vae_dist, vae_enc = self.planner(s)
             latent = vae_dist.rsample()
-            flow = self.decoder(latent, vae_enc)
+            flow = self.actor(latent, vae_enc)
             warped = self.stn(s[:, 1:], flow)
             reg_loss =  utils.multi_scale_ncc_loss(s[:, :1], warped) + 1.*utils.gradient_loss(flow) + 0.01*self.kl_loss(vae_dist)
             loss['reg'] = reg_loss
 
-            self.decoder_optim.zero_grad()
+            self.actor_optim.zero_grad()
             loss['reg'].backward()
-            self.decoder_optim.step()
+            self.actor_optim.step()
 
         return loss
 
@@ -225,23 +225,23 @@ class SAC:
             param.requires_grad = True
 
     def save_model(self, step, model_path):
-        torch.save(self.actor.state_dict(), os.path.join(model_path,'actor_{}.ckpt'.format(step)))
+        torch.save(self.planner.state_dict(), os.path.join(model_path,'planner_{}.ckpt'.format(step)))
         torch.save(self.critic1.state_dict(), os.path.join(model_path,'critic1_{}.ckpt'.format(step)))
         torch.save(self.critic2.state_dict(), os.path.join(model_path,'critic2_{}.ckpt'.format(step)))
-        torch.save(self.decoder.state_dict(), os.path.join(cfg.MODEL_PATH,'decoder_{}.ckpt'.format(step)))
+        torch.save(self.actor.state_dict(), os.path.join(cfg.MODEL_PATH,'actor_{}.ckpt'.format(step)))
 
     def load_model(self, name, model_path):
         eval("self.{}.load_state_dict(torch.load('{}'))".format(name, model_path))
 
-    def load_actor(self, model_path):
-        self.actor.load_state_dict(torch.load(model_path,  map_location={'cuda:7': 'cuda:6'}))
+    def load_planner(self, model_path):
+        self.planner.load_state_dict(torch.load(model_path,  map_location={'cuda:7': 'cuda:6'}))
 
     def load_critic(self, critic1_path, critic2_path):
         self.critic1.load_state_dict(torch.load(critic1_path,  map_location={'cuda:7': 'cuda:6'}))
         self.critic2.load_state_dict(torch.load(critic2_path,  map_location={'cuda:7': 'cuda:6'}))
 
-    def load_decoder(self, model_path):
-        self.decoder.load_state_dict(torch.load(model_path,  map_location={'cuda:7': 'cuda:6'}))
+    def load_actor(self, model_path):
+        self.actor.load_state_dict(torch.load(model_path,  map_location={'cuda:7': 'cuda:6'}))
 
 
 

@@ -9,7 +9,7 @@ import data_util.liver
 from data_util.data import Split
 from dataloader import BrainData
 from config import Config as cfg
-from brain import SAC
+from brain import SPAC
 from env import Env
 from agent import Agent
 from summary import Summary
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     generator = dataset.generator(cfg.DATA_TYPE, batch_size=1, loop=True)
 
 
-    brain = SAC(stn, device)
+    brain = SPAC(stn, device)
     if cfg.PRE_TRAINED:
         print('pretrain models')
         brain.load_model('actor', cfg.ACTOR_MODEL)
