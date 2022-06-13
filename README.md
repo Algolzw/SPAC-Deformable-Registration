@@ -1,5 +1,4 @@
-## Official PyTorch implementation of the [SPAC](https://arxiv.org/abs/2112.07415) "Stochastic Planner-Actor-Critic for Unsupervised Deformable Image Registration", AAAI 2022.
-![visitors](https://visitor-badge.glitch.me/badge?page_id=Algolzw/SPAC-Deformable-Registration) 
+## Official PyTorch implementation of the [SPAC](https://arxiv.org/abs/2112.07415) "Stochastic Planner-Actor-Critic for Unsupervised Deformable Image Registration", AAAI 2022. ![visitors](https://visitor-badge.glitch.me/badge?page_id=Algolzw/SPAC-Deformable-Registration) 
 
 ![SAEC](figs/overview.png)
 
