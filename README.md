@@ -47,10 +47,20 @@ python test.py
 If our code helps your research or work, please consider citing our paper.
 
 ```
-@article{luo2021stochastic,
+@inproceedings{luo2022stochastic,
   title={Stochastic Planner-Actor-Critic for Unsupervised Deformable Image Registration},
   author={Luo, Ziwei and Hu, Jing and Wang, Xin and Hu, Shu and Kong, Bin and Yin, Youbing and Song, Qi and Wu, Xi and Lyu, Siwei},
-  journal={arXiv preprint arXiv:2112.07415},
+  booktitle={Proceedings of the AAAI Conference on Artificial Intelligence},
+  volume={36},
+  number={2},
+  pages={1917--1925},
+  year={2022}
+}
+
+@inproceedings{Luo2021StochasticAF,
+  title={Stochastic Actor-Executor-Critic for Image-to-Image Translation},
+  author={Ziwei Luo and Jing Hu and Xin Wang and Siwei Lyu and Bin Kong and Youbing Yin and Qi Song and Xi Wu},
+  booktitle={IJCAI},
   year={2021}
 }
 ```
