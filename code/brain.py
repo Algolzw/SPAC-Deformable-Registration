@@ -17,7 +17,7 @@ class SPAC:
         self.log_alpha = torch.tensor(-1.0).to(device).detach().requires_grad_(True)
 
         self.planner = Encoder(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
-        self.actor = actor(nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
+        self.actor = Decoder(nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
 
         self.critic1 = Critic(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
         self.critic2 = Critic(nc=cfg.STATE_CHANNEL, nf=cfg.NF, bottle=cfg.BOTTLE).to(device)
