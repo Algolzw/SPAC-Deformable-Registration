@@ -18,10 +18,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-
-from labels import BrainLabel
-
-
 import pystrum.pynd.ndutils as nd
 
 def jacobian_determinant(disp):
@@ -483,8 +479,6 @@ def convert_score(score):
     res = 1 if score >0 else -1
     return res
 
-def brain_labels():
-    return BrainLabel.VALUES
 
 def aff_flow(W, b, xs, ys, zs):
     b = b.view(-1, 1, 1, 1, 3)
